@@ -3,7 +3,6 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 
 const manifest = JSON.parse(await readFile("reference-assets.json", "utf8"));
-if (manifest.release !== "reference-models-uastc-v2") throw new Error("Unexpected asset release");
 const total = manifest.models.reduce((sum, model) => sum + model.bytes, 0);
 if (total > 850 * 1024 ** 2) throw new Error("Pages asset budget exceeded");
 await mkdir("dist/models/references", { recursive: true });
@@ -12,8 +11,11 @@ await Promise.all(Array.from({ length: 4 }, async () => {
   while (queue.length) {
     const model = queue.shift();
     if (!/^[a-z0-9-]+\.glb$/.test(model.file)) throw new Error("Invalid asset filename");
+    const release = model.release || manifest.release;
+    if (!["reference-sources-v2", "reference-models-uastc-v2", "reference-models-pbr-preview-v1"].includes(release))
+      throw new Error("Unexpected asset release");
     const response = await fetch(
-      `https://github.com/NieMandX/formai/releases/download/${manifest.release}/${model.file}`,
+      `https://github.com/NieMandX/formai/releases/download/${release}/${model.file}`,
       { signal: AbortSignal.timeout(180000) },
     );
     if (!response.ok) throw new Error(`${model.file}: HTTP ${response.status}`);
